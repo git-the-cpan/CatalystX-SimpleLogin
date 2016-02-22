@@ -1,7 +1,7 @@
 package CatalystX::SimpleLogin::Controller::Login;
 use Moose;
 use Moose::Autobox;
-use MooseX::Types::Moose qw/ HashRef ArrayRef ClassName Object Str /;
+use MooseX::Types::Moose qw/ HashRef ArrayRef ClassName Object Str Int/;
 use MooseX::Types::Common::String qw/ NonEmptySimpleStr /;
 use CatalystX::SimpleLogin::Form::Login;
 use namespace::autoclean;
@@ -21,6 +21,7 @@ __PACKAGE__->config(
         RenderAsTTTemplate
         Logout
     /],
+    remember_me_expiry => 999999999,
 );
 
 sub BUILD {
@@ -50,6 +51,11 @@ has login_form_args => (
     isa => HashRef,
     is => 'ro',
     default => sub { {} },
+);
+
+has remember_me_expiry => (
+    isa => Int,
+    is => 'ro',
 );
 
 has login_form_stash_key => (
@@ -102,9 +108,11 @@ sub login
     my $p = $ctx->req->parameters;
 
     if( $form->process(ctx => $ctx, params => $p) ) {
+        $ctx->change_session_id;
+
+        $self->remember_me($ctx, $form->field( 'remember' )->value);
+
         $self->do_post_login_redirect($ctx);
-        $ctx->extend_session_expires(999999999999)
-            if $form->field( 'remember' )->value;
     }
 
     $ctx->stash(
@@ -114,6 +122,19 @@ sub login
             $self->render_login_form($ctx, $form);
         }, $ctx),
     );
+}
+
+sub remember_me
+{
+    my ($self, $ctx, $remember) = @_;
+    my $expire = $remember ?
+        $self->remember_me_expiry : $ctx->initial_session_expires - time();
+    # set expiry time in storage
+    $ctx->change_session_expires($expire);
+    # refresh changed expiry time from storage
+    $ctx->reset_session_expires;
+    # update cookie TTL
+    $ctx->set_session_id($ctx->sessionid);
 }
 
 sub do_post_login_redirect {
@@ -243,8 +264,8 @@ require registration (hence the name).
 
 =head2 redirect_after_login_uri
 
-If you are using WithRedirect (i.e. by default), then this methd is overridden
-to redirect the user back to the page they intially hit which required
+If you are using WithRedirect (i.e. by default), then this method is overridden
+to redirect the user back to the page they initially hit which required
 authentication.
 
 Note that even if the original URI was a post, then the redirect back will only
@@ -265,6 +286,17 @@ through your view, this is the place to hook into.
 
 A stub action that is anchored at the root of the site ("/") and does
 require registration (hence the name).
+
+=head2 remember_me
+
+An action that is called to deal with whether the remember me flag has
+been set or not.  If it has been it extends the session expiry time.
+
+This is only called if there was a succesful login so if you want a
+hook into that part of the process this is a good place to hook into.
+
+It is also obviously a good place to hook into if you want to change
+the behaviour of the remember me flag.
 
 =head1 SEE ALSO
 

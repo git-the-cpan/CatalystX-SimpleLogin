@@ -23,14 +23,15 @@ requires 'MooseX::RelatedClassRoles' => '0.004';
 requires 'Moose::Autobox';
 requires 'HTML::FormHandler' => '0.28001';
 requires 'namespace::autoclean';
-requires 'Catalyst::Plugin::Session' => '0.27'; # Required as we use the 'Plugin::Session' config key in ::Manual
+requires 'Catalyst::Plugin::Session' => '0.35'; # Required as we use the 'Plugin::Session' config key in ::Manual
+requires 'Try::Tiny' => '0.24';
 
-test_requires 'Test::More' => '0.94';
+test_requires 'Test::More'  => '0.94';
+test_requires 'Class::Load' => '0.20';
 test_requires 'Test::Exception';
 test_requires 'File::Temp';
 test_requires 'Catalyst::Action::RenderView';
 test_requires 'Catalyst::Plugin::Session::State::Cookie';
-test_requires 'Catalyst::Plugin::Session::Store::File';
 test_requires 'HTTP::Request::Common';
 test_requires 'Catalyst::ActionRole::ACL';
 test_requires 'CatalystX::InjectComponent';
